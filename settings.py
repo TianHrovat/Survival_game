@@ -56,7 +56,7 @@ FONTS = {
 
 
 ITEM_DATA = {
-    "Apple": {"name": "Apple", "color": COLORS["red"], "health_restore": 10, "hunger_restore": 0, "thirst_restore": 0, "speed_boost": 0},
-    "Banana": {"name": "Banana", "color": COLORS["yellow"], "health_restore": 0, "hunger_restore": 15, "thirst_restore": 0, "speed_boost": 0},
-    "Water Bottle": {"name": "Water Bottle", "color": COLORS["blue"], "health_restore": 0, "hunger_restore": 0, "thirst_restore": 30, "speed_boost": 0},
+    "Apple": {"name": "Apple", "type" : "consumable", "color": COLORS["red"], "health_restore": 10, "hunger_restore": 0, "thirst_restore": 0, "speed_boost": 0},
+    "Banana": {"name": "Banana", "type" : "consumable", "color": COLORS["yellow"], "health_restore": 0, "hunger_restore": 15, "thirst_restore": 0, "speed_boost": 0},
+    "Water Bottle": {"name": "Water Bottle", "type" : "consumable", "color": COLORS["blue"], "health_restore": 0, "hunger_restore": 0, "thirst_restore": 30, "speed_boost": 0},
 }

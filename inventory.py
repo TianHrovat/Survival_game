@@ -3,8 +3,9 @@ import random
 from settings import COLORS, ITEM_DATA, SCREEN_W, SCREEN_H, FONTS
 
 class Item:
-    def __init__(self, name, color, health_restore=0, hunger_restore=0, thirst_restore=0, speed_boost=0):
+    def __init__(self, name, type, color, health_restore=0, hunger_restore=0, thirst_restore=0, speed_boost=0):
         self.name = name
+        self.type = type
         self.count = 0
         self.color = color
         self.health_restore = health_restore
@@ -14,18 +15,47 @@ class Item:
 
     def render(self, screen, x, y):
         pygame.draw.rect(screen, self.color, (x,y,16,16))
+
+    def use(self, player):
+        if self.type == "consumable":
+            can_consume = ((player.health < player.max_health and self.health_restore > 0) or
+                           (player.hunger < player.max_hunger and self.hunger_restore > 0) or
+                            (player.thirst < player.max_thirst and self.thirst_restore > 0))
+            if not can_consume:
+                return False
+            player.health = min(player.max_health, player.health + self.health_restore)
+            player.hunger = min(player.max_hunger, player.hunger + self.hunger_restore)
+            player.thirst = min(player.max_thirst, player.thirst + self.thirst_restore)
+            self.count -= 1
+            if self.count <= 0:
+                return True # Item consumed and removed from inventory
+        return False # Not consumed or removed
+        
         
         
 class DroppedItem(Item):
     def __init__(self, name, count, color, x, y):
-        super().__init__(name, color)
+    # 1. Look up the stats from your ITEM_DATA
+        stats = ITEM_DATA.get(name, {})
+        
+        # 2. Pass ALL required arguments to the Parent (Item) class
+        super().__init__(
+            name = name,
+            type = stats.get("type", "misc"), # Default to "misc" if not found
+            color = color,
+            health_restore = stats.get("health_restore", 0),
+            hunger_restore = stats.get("hunger_restore", 0),
+            thirst_restore = stats.get("thirst_restore", 0),
+            speed_boost = stats.get("speed_boost", 0)
+        )
+    
         self.count = count
         self.x = x
         self.y = y
         self.rect = pygame.Rect(self.x, self.y, 16, 16)
 
         # Timer logic
-        self.spawn_time = None  # We don't set this yet!
+        self.spawn_time = None 
         self.pickup_cooldown = 2000
 
     def draw_in_world(self, surface, inventory_is_open):
@@ -41,28 +71,18 @@ class DroppedItem(Item):
                 pygame.draw.rect(surface, COLORS["dropped_item_outline"], self.rect, 1)
 
     def check_pickup(self, player):
-        # If inventory is open, we can't pick up items anyway
-        if player.inv.is_open:
-            return False
-
-        # If the timer hasn't started yet (inventory was never closed), return
-        if self.spawn_time is None:
+        if player.inv.is_open or self.spawn_time is None:
             return False
 
         now = pygame.time.get_ticks()
         if now - self.spawn_time > self.pickup_cooldown:
             collide_rect = self.rect.inflate(10, 10)
             if player.rect.colliderect(collide_rect):
-                stats = ITEM_DATA.get(self.name, {})
-                
-                new_item = Item(
-                    name=self.name, 
-                    color=self.color, 
-                    hunger_restore=stats.get("hunger_restore", 0),
-                    health_restore=stats.get("health_restore", 0),
-                    thirst_restore=stats.get("thirst_restore", 0), # Added thirst back in
-                    speed_boost=stats.get("speed_boost", 0)
-                )
+                # Since DroppedItem IS an Item, we can just pass 'self' 
+                # or create a clean Item instance from self attributes
+                new_item = Item(self.name, self.type, self.color, 
+                                self.health_restore, self.hunger_restore, 
+                                self.thirst_restore, self.speed_boost)
                 
                 player.inv.add_item(new_item, self.count)
                 return True
@@ -127,7 +147,9 @@ class Inventory:
         # CONSUME (Right Click)
         if input_handler.is_mouse_just_clicked(3): # Right Click
             if hovered_idx is not None and self.items[hovered_idx]:
-                self._consume_item(hovered_idx, player)
+                item = self.items[hovered_idx]
+                if item.use(player):
+                    self.items[hovered_idx] = None # Remove if consumed
 
         # DROP (Q Key)
         if input_handler.is_key_just_pressed(pygame.K_q):
@@ -193,23 +215,6 @@ class Inventory:
         if item.count <= 0:
             self.items[index] = None
         return dropped_obj
-
-    def _consume_item(self, index, player):
-        item = self.items[index]
-        # ... (same logic as before, just using item from list)
-        can_use = (item.health_restore > 0 and player.health < player.max_health) or \
-                  (item.hunger_restore > 0 and player.hunger < player.max_hunger) or \
-                  (item.thirst_restore > 0 and player.thirst < player.max_thirst)
-        
-        if can_use:
-            player.health = min(player.max_health, player.health + item.health_restore)
-            player.hunger = min(player.max_hunger, player.hunger + item.hunger_restore)
-            player.thirst = min(player.max_thirst, player.thirst + item.thirst_restore)
-            item.count -= 1
-            if item.count <= 0:
-                self.items[index] = None
-            return True
-        return False
     
     def _draw_dynamic_header(self, screen, text_str, grid_x, grid_y, bg_width):
         # Determine color: Gold if it's an item name, White/Gray if it's just "INVENTORY"
