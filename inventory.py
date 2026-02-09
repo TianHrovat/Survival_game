@@ -1,6 +1,6 @@
 import pygame
 import random
-from settings import COLORS, ITEM_DATA, SCREEN_W, SCREEN_H, FONTS
+from settings import COLORS, ITEM_DATA, SCREEN_W, SCREEN_H, FONTS, TILE_SIZE, GRID_W, GRID_H
 
 class Item:
     def __init__(self, name, type, color, health_restore=0, hunger_restore=0, thirst_restore=0, speed_boost=0):
@@ -99,6 +99,10 @@ class Inventory:
         self.dragging_item = None
         self.dragging_from_index = None
         self.drag_offset = (0, 0)
+        # Placement mode for raft tiles
+        self.placement_active = False
+        self.placement_item_name = None
+        self.placement_from_index = None
 
     def add_item(self, item_obj, count):
         # First, try to stack with existing item
@@ -115,9 +119,45 @@ class Inventory:
                 return True
         return False # Inventory full
 
-    def handle_input(self, input_handler, player, grid_x, grid_y):
+    def handle_input(self, input_handler, player, grid_x, grid_y, raft=None):
         mouse_pos = pygame.mouse.get_pos()
         hovered_idx = self._get_hovered_slot_index(grid_x, grid_y)
+
+        # If we're in placement mode, handle placement first (prevents drag/consume)
+        if self.placement_active:
+            # Determine world tile under mouse
+            mx, my = mouse_pos
+            tile_x = mx // TILE_SIZE
+            tile_y = my // TILE_SIZE
+            if raft is None:
+                # No raft provided; cancel placement
+                self.placement_active = False
+                self.placement_item_name = None
+                self.placement_from_index = None
+                return None
+
+            # Confirm placement (Left Click)
+            if input_handler.is_mouse_just_clicked(1):
+                # Use world coords when placing
+                success = raft.add_tile(tile_x, tile_y, self.placement_item_name)
+                if success:
+                    src_idx = self.placement_from_index
+                    if src_idx is not None and self.items[src_idx]:
+                        self.items[src_idx].count -= 1
+                        if self.items[src_idx].count <= 0:
+                            self.items[src_idx] = None
+                # End placement regardless of success
+                self.placement_active = False
+                self.placement_item_name = None
+                self.placement_from_index = None
+                return None
+
+            # Cancel placement (Right Click)
+            if input_handler.is_mouse_just_clicked(3):
+                self.placement_active = False
+                self.placement_item_name = None
+                self.placement_from_index = None
+                return None
 
         # START DRAGGING (Left Click Down)
         if input_handler.is_mouse_just_clicked(1): # Left click
@@ -144,12 +184,20 @@ class Inventory:
             self.dragging_item = None
             self.dragging_from_index = None
 
-        # CONSUME (Right Click)
+        # CONSUME / START PLACEMENT (Right Click)
         if input_handler.is_mouse_just_clicked(3): # Right Click
             if hovered_idx is not None and self.items[hovered_idx]:
                 item = self.items[hovered_idx]
-                if item.use(player):
-                    self.items[hovered_idx] = None # Remove if consumed
+                # If this is a raft tile, enter placement mode instead of immediate use
+                if item.type == "raft_tile":
+                    self.placement_active = True
+                    self.placement_item_name = item.name
+                    self.placement_from_index = hovered_idx
+                    # Close inventory so player can place in world space
+                    self.is_open = False
+                else:
+                    if item.use(player):
+                        self.items[hovered_idx] = None # Remove if consumed
 
         # DROP (Q Key)
         if input_handler.is_key_just_pressed(pygame.K_q):

@@ -1,5 +1,5 @@
 import pygame
-from settings import SCREEN_W, SCREEN_H, COLORS
+from settings import SCREEN_W, SCREEN_H, COLORS, TILE_SIZE, FONTS
 
 class Character:
     def __init__(self, x, y, w, h, health, max_health, hunger, max_hunger, thirst, max_thirst, speed, inv):
@@ -22,6 +22,10 @@ class Character:
         self.max_health = max_health
 
         self.inv = inv
+        # Off-raft status: when player is teleported back, mark them 'off' briefly
+        # and use a cooldown to avoid repeated immediate damage.
+        self.feel_off = False
+        self.off_cooldown_end = 0  # pygame.time.get_ticks() target when off state ends
 
     def apply_movement(self, move_vec):
         """Receives a normalized vector from InputHandler and moves the player."""
@@ -37,6 +41,34 @@ class Character:
         self.y += self.vely
         self.rect.topleft = (self.x, self.y)
 
+    def mark_off(self, cooldown_ms=1000):
+        """Mark the player as 'off' for cooldown_ms milliseconds."""
+        self.feel_off = True
+        try:
+            self.off_cooldown_end = pygame.time.get_ticks() + int(cooldown_ms)
+        except Exception:
+            self.off_cooldown_end = 0
+
+    def update_off_status(self):
+        """Update off status; clear if cooldown has passed."""
+        if self.feel_off:
+            try:
+                if pygame.time.get_ticks() >= self.off_cooldown_end:
+                    self.feel_off = False
+            except Exception:
+                self.feel_off = False
+
+    def is_on_raft(self, raft):
+        player_center_x = self.x + self.w / 2
+        player_center_y = self.y + self.h / 2
+
+        # Convert player center to world grid coordinates using TILE_SIZE
+        grid_x = int(player_center_x // TILE_SIZE)
+        grid_y = int(player_center_y // TILE_SIZE)
+
+        return (grid_x, grid_y) in raft.tiles
+
+
     def _draw_hud(self, surface):
         X_OFFSET = 30
         Y_OFFSET = 40
@@ -44,9 +76,6 @@ class Character:
         HEALTH_W, HEALTH_H = 350, 24 
         HUNGER_W, HUNGER_H = 200, 12  
         THIRST_W, THIRST_H = 200, 12 # Same size as hunger
-        
-        font_large = pygame.font.SysFont("monospace", 16, bold=True)
-        font_small = pygame.font.SysFont("monospace", 12, bold=True)
 
         # --- 1. HEALTH BAR ---
         hp_ratio = max(0, min(1, self.health / self.max_health))
@@ -58,7 +87,7 @@ class Character:
             line_x = X_OFFSET + (HEALTH_W * i // 10)
             pygame.draw.line(surface, (0, 0, 0, 150), (line_x, Y_OFFSET), (line_x, Y_OFFSET + HEALTH_H - 1), 2)
             
-        hp_text = font_large.render(f" HEALTH {int(self.health)}/{int(self.max_health)} ", True, COLORS["health_bar_text_color"])
+        hp_text = FONTS["large"].render(f" HEALTH {int(self.health)}/{int(self.max_health)} ", True, COLORS["health_bar_text_color"])
         text_rect = hp_text.get_rect(bottomleft=(X_OFFSET, Y_OFFSET - 3))
         pygame.draw.rect(surface, COLORS["black"], text_rect)
         surface.blit(hp_text, text_rect)
@@ -73,7 +102,7 @@ class Character:
         if hg_ratio > 0:
             pygame.draw.rect(surface, COLORS["hunger_bar"], (HG_X, HG_Y, HUNGER_W * hg_ratio, HUNGER_H))
 
-        hg_text = font_small.render(f" FOOD {int(self.hunger)}% ", True, COLORS["hunger_bar_text_color"])
+        hg_text = FONTS["small"].render(f" FOOD {int(self.hunger)}% ", True, COLORS["hunger_bar_text_color"])
         hg_text_rect = hg_text.get_rect(topleft=(HG_X, HG_Y + HUNGER_H + 2))
         pygame.draw.rect(surface, COLORS["black"], hg_text_rect)
         surface.blit(hg_text, hg_text_rect)
@@ -93,7 +122,7 @@ class Character:
             pygame.draw.rect(surface, COLORS.get("thirst_bar", (0, 0, 255)), (TH_X, TH_Y, THIRST_W * th_ratio, THIRST_H))
 
         # Text
-        th_text = font_small.render(f" WATER {int(self.thirst)}% ", True, COLORS.get("thirst_bar_text_color", (255, 255, 255)))
+        th_text = FONTS["small"].render(f" WATER {int(self.thirst)}% ", True, COLORS.get("thirst_bar_text_color", (255, 255, 255)))
         th_text_rect = th_text.get_rect(topleft=(TH_X, TH_Y + THIRST_H + 2))
         pygame.draw.rect(surface, COLORS["black"], th_text_rect)
         surface.blit(th_text, th_text_rect)

@@ -36,11 +36,13 @@ COLORS = {
 
     # Items
     "dropped_item_outline" : (255, 255, 255),
-
-    # Item Colors
-    "red": (220, 40, 40),
-    "yellow": (240, 180, 40),
-    "blue": (40, 140, 240), # Added for water items
+    "apple": (220, 40, 40),
+    "banana": (240, 180, 40),
+    "water_bottle": (40, 140, 240),
+    
+    # Raft Tiles
+    "wet_wood": (139, 69, 19),
+    "dry_wood": (160, 82, 45),
 
     # General Colors
     "black": (0, 0, 0),
@@ -54,9 +56,17 @@ FONTS = {
     "small": pygame.font.SysFont("monospace", 16, bold=True),
 }
 
-
 ITEM_DATA = {
-    "Apple": {"name": "Apple", "type" : "consumable", "color": COLORS["red"], "health_restore": 10, "hunger_restore": 0, "thirst_restore": 0, "speed_boost": 0},
-    "Banana": {"name": "Banana", "type" : "consumable", "color": COLORS["yellow"], "health_restore": 0, "hunger_restore": 15, "thirst_restore": 0, "speed_boost": 0},
-    "Water Bottle": {"name": "Water Bottle", "type" : "consumable", "color": COLORS["blue"], "health_restore": 0, "hunger_restore": 0, "thirst_restore": 30, "speed_boost": 0},
+    "Apple": {"name": "Apple", "type" : "consumable", "color": COLORS["apple"], "health_restore": 10, "hunger_restore": 0, "thirst_restore": 0, "speed_boost": 0},
+    "Banana": {"name": "Banana", "type" : "consumable", "color": COLORS["banana"], "health_restore": 0, "hunger_restore": 15, "thirst_restore": 0, "speed_boost": 0},
+    "Water Bottle": {"name": "Water Bottle", "type" : "consumable", "color": COLORS["water_bottle"], "health_restore": 0, "hunger_restore": 0, "thirst_restore": 30, "speed_boost": 0},
+    "Wet Wood": {"name": "Wet Wood", "type" : "raft_tile", "color": COLORS["wet_wood"]},
+    "Dry Wood": {"name": "Dry Wood", "type" : "raft_tile", "color": COLORS["dry_wood"]},
+}
+
+GRID_W, GRID_H = 32, 20        
+TILE_SIZE = 32
+TILE_DATA = {
+    "Wet Wood": {"durability": 100, "color": COLORS["wet_wood"]},
+    "Dry Wood": {"durability": 150, "color": COLORS["dry_wood"]},
 }
