@@ -1,4 +1,5 @@
 import pygame
+import random  # <-- Add this import
 from settings import ITEM_DATA, TILE_DATA, TILE_SIZE, SCREEN_W, SCREEN_H, COLORS, GRID_W, GRID_H
 
 
@@ -124,15 +125,6 @@ class Raft:
         return False
 
     def get_center_tile(self):
-        """Return a tile coordinate (world_x, world_y) representing the raft center.
-
-        Implementation:
-        - Compute bounding box (min/max x,y) of current tiles and take the integer
-          center of that box.
-        - If the center coordinate is occupied by a tile, return it.
-        - Otherwise, return the nearest existing tile to that center (by Manhattan distance).
-        - If no tiles exist, return None.
-        """
         if not self.tiles:
             return None
 
@@ -155,3 +147,18 @@ class Raft:
 
         nearest = min(self.tiles.keys(), key=dist_key)
         return nearest
+
+    def damage_tile(self, world_x, world_y, damage_amount):
+        """Reduce a tile's durability by damage_amount. Remove if durability <= 0."""
+        key = (world_x, world_y)
+        if key not in self.tiles:
+            return False
+        
+        tile = self.tiles[key]
+        tile.durability -= damage_amount
+        
+        if tile.durability <= 0:
+            del self.tiles[key]
+            return True  # Tile destroyed
+        
+        return False  # Tile damaged but survived

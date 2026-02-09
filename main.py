@@ -2,10 +2,11 @@ import pygame
 pygame.init()
 import random
 from settings import ITEM_DATA, TILE_DATA, GRID_H, GRID_W, SCREEN_W, SCREEN_H, COLORS, TILE_SIZE, FONTS
-from sprites import Character
+from player import Character
 from inventory import Inventory, Item
 from input_handler import InputHandler
 from raft import Raft, RaftTile
+from tools import FishingRod
 
 
 # Setup Display
@@ -18,6 +19,8 @@ input_handler = InputHandler()
 # Character params: x, y, width, height, health, max_health, hunger, max_hunger, thirst, max_thirst, speed, inventory_obj
 player = Character(SCREEN_W//2, SCREEN_H//2, 20, 20, 100, 100, 100, 100, 80, 100, 5, Inventory())
 dropped_items = []
+
+hotbar_items = [FishingRod()]
 
 # Initialize Raft
 raft_initial_size = 3
@@ -75,26 +78,58 @@ while running:
                 center = raft.get_center_tile()
                 if center is not None:
                     center_x, center_y = center
+
                     # center in pixels, position player so their center matches tile center
                     pixel_x = int(center_x * TILE_SIZE + TILE_SIZE / 2 - player.w / 2)
                     pixel_y = int(center_y * TILE_SIZE + TILE_SIZE / 2 - player.h / 2)
                     player.x = pixel_x
                     player.y = pixel_y
                     player.rect.topleft = (player.x, player.y)
-
-                # apply damage only if cooldown expired
-                now = pygame.time.get_ticks()
-                if now >= getattr(player, "off_cooldown_end", 0):
                     player.health -= 10
-                    # mark player 'off' briefly to avoid repeated damage
-                    try:
-                        player.mark_off(1000)
-                    except Exception:
-                        player.off_cooldown_end = now + 1000
+                else:
+                    running = False  # No tiles on raft, player dies
+                    print("Main loop exited player is not on raft and raft has no tiles.")
+                    
         except Exception:
-            pass
-    
+            print("Error handling player raft status")
 
+
+    # Handle Fishing Rod
+    fishing_rod = hotbar_items[0]
+    fishing_rod.update()  # Update cooldowns
+    
+    # Start casting (SPACE key pressed down) - prevent casting while retracting or on cooldown
+    if input_handler.is_key_pressed(pygame.K_SPACE) and not fishing_rod.is_thrown and not fishing_rod.is_casting and not fishing_rod.is_retracting and fishing_rod.can_cast():
+        fishing_rod.start_casting(player.x + player.w // 2, player.y + player.h // 2)
+    
+    # Update casting power while holding SPACE
+    if fishing_rod.is_casting:
+        fishing_rod.update_casting()
+    
+    # Release cast (SPACE key released)
+    if not input_handler.is_key_pressed(pygame.K_SPACE) and fishing_rod.is_casting:
+        # Calculate direction to mouse
+        mouse_pos = pygame.mouse.get_pos()
+        player_pos = pygame.math.Vector2(player.x + player.w // 2, player.y + player.h // 2)
+        direction = pygame.math.Vector2(mouse_pos) - player_pos
+        if direction.length_squared() > 0:
+            direction = direction.normalize()
+        
+        # Throw with power based on cast bar
+        fishing_rod.throw(direction, player.x + player.w // 2, player.y + player.h // 2)
+    
+    # Update hook and check collisions
+    if fishing_rod.is_thrown or fishing_rod.is_retracting:
+        fishing_rod.update_hook(player.x + player.w // 2, player.y + player.h // 2, dropped_items)
+        
+        # If caught an item, add to inventory (only when retraction completes)
+        if not fishing_rod.is_retracting:
+            caught = fishing_rod.get_caught_item()
+            if caught:
+                new_item = Item(caught.name, caught.type, caught.color, 
+                               caught.health_restore, caught.hunger_restore, 
+                               caught.thirst_restore, caught.speed_boost)
+                player.inv.add_item(new_item, caught.count)
 
     # --- Rendering ---
     screen.fill(COLORS["background"])
@@ -142,13 +177,18 @@ while running:
             screen.blit(bg, (tx, ty))
             screen.blit(txt_surf, (tx + padding_x, ty + padding_y))
         except Exception:
-            pass
-
+            print("Error rendering placement tooltip")
+        
     # 2. Render dropped items in the world
     for dropped_item in dropped_items[:]:
         dropped_item.draw_in_world(screen, player.inv.is_open)
         if dropped_item.check_pickup(player):
             dropped_items.remove(dropped_item)
+    
+    # Render fishing rod
+    fishing_rod = hotbar_items[0]
+    fishing_rod.draw(screen, player.x + player.w // 2, player.y + player.h // 2)
+    fishing_rod.draw_casting_ui(screen, player.x + player.w // 2, player.y + player.h // 2)
 
     # 3. Render player and HUD
     player.draw(screen)
@@ -157,6 +197,15 @@ while running:
     # 4. Render Inventory UI on top
     if player.inv.is_open:
         player.inv._render(screen)
+
+    '''
+    SHARK DAMAGE
+    if random.random() < 0.30:  # 1% chance per frame
+        random_tile = random.choice(list(raft.tiles.keys())) if raft.tiles else None
+        if random_tile:
+            tx, ty = random_tile
+            raft.damage_tile(tx, ty, 10)
+    '''
 
     pygame.display.flip()
     clock.tick(60)

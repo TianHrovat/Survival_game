@@ -22,10 +22,6 @@ class Character:
         self.max_health = max_health
 
         self.inv = inv
-        # Off-raft status: when player is teleported back, mark them 'off' briefly
-        # and use a cooldown to avoid repeated immediate damage.
-        self.feel_off = False
-        self.off_cooldown_end = 0  # pygame.time.get_ticks() target when off state ends
 
     def apply_movement(self, move_vec):
         """Receives a normalized vector from InputHandler and moves the player."""

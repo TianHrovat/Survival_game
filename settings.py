@@ -35,7 +35,7 @@ COLORS = {
     "inventory_hover_text": (255, 220, 100),
 
     # Items
-    "dropped_item_outline" : (255, 255, 255),
+    "dropped_item_outline": (255, 255, 255),
     "apple": (220, 40, 40),
     "banana": (240, 180, 40),
     "water_bottle": (40, 140, 240),
@@ -44,11 +44,18 @@ COLORS = {
     "wet_wood": (139, 69, 19),
     "dry_wood": (160, 82, 45),
 
+    # Fishing Rod
+    "fishing_rod_line": (20,20, 20),
+    "fishing_rod_hook": (255, 200, 100),
+    "fishing_rod_hook_outline": (20, 20, 20),
+    "fishing_rod_cast_bar_fill": (255, 200, 100),
+    "fishing_rod_cast_bar_background": (50, 50, 50),
+    "fishing_rod_cast_bar_outline": (255, 255, 255),
+
     # General Colors
     "black": (0, 0, 0),
     "gray": (50, 50, 50),
     "white": (255, 255, 255),
-
 }
 
 FONTS = {
@@ -57,16 +64,35 @@ FONTS = {
 }
 
 ITEM_DATA = {
-    "Apple": {"name": "Apple", "type" : "consumable", "color": COLORS["apple"], "health_restore": 10, "hunger_restore": 0, "thirst_restore": 0, "speed_boost": 0},
-    "Banana": {"name": "Banana", "type" : "consumable", "color": COLORS["banana"], "health_restore": 0, "hunger_restore": 15, "thirst_restore": 0, "speed_boost": 0},
-    "Water Bottle": {"name": "Water Bottle", "type" : "consumable", "color": COLORS["water_bottle"], "health_restore": 0, "hunger_restore": 0, "thirst_restore": 30, "speed_boost": 0},
-    "Wet Wood": {"name": "Wet Wood", "type" : "raft_tile", "color": COLORS["wet_wood"]},
-    "Dry Wood": {"name": "Dry Wood", "type" : "raft_tile", "color": COLORS["dry_wood"]},
+    "Apple": {"name": "Apple", "type": "consumable", "color": COLORS["apple"], "health_restore": 10, "hunger_restore": 0, "thirst_restore": 0, "speed_boost": 0},
+    "Banana": {"name": "Banana", "type": "consumable", "color": COLORS["banana"], "health_restore": 0, "hunger_restore": 15, "thirst_restore": 0, "speed_boost": 0},
+    "Water Bottle": {"name": "Water Bottle", "type": "consumable", "color": COLORS["water_bottle"], "health_restore": 0, "hunger_restore": 0, "thirst_restore": 30, "speed_boost": 0},
+    "Wet Wood": {"name": "Wet Wood", "type": "raft_tile", "color": COLORS["wet_wood"]},
+    "Dry Wood": {"name": "Dry Wood", "type": "raft_tile", "color": COLORS["dry_wood"]},
 }
 
 GRID_W, GRID_H = 32, 20        
 TILE_SIZE = 32
+
 TILE_DATA = {
     "Wet Wood": {"durability": 100, "color": COLORS["wet_wood"]},
     "Dry Wood": {"durability": 150, "color": COLORS["dry_wood"]},
+}
+
+# Fishing Rod Settings
+FISHING_ROD = {
+    "durability": 100,
+    "fishing_cooldown_duration": 30,  # Frames
+    "max_cast_time": 60,  # Frames to reach max power
+    "max_line_length": 300,  # Pixels
+    "travel_time_frames_base": 15,  # Base frames for hook to reach destination
+    "travel_time_frames_additional": 30,  # Additional frames based on cast power
+    "hook_radius": 4,  # Pixels
+    "line_width": 2,  # Pixels
+    "cast_bar_width": 400,  # Pixels
+    "cast_bar_height": 30,  # Pixels
+    "cast_bar_offset_y": 60,  # Pixels from bottom
+    "hook_collision_radius": 6,  # Pixels for collision detection
+    "retraction_time_frames": 30,  # Time to retract back to player
+    "cast_bar_easing": "ease_out_quadratic",  # Easing function for retraction
 }
