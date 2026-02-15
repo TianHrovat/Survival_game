@@ -5,18 +5,58 @@ from settings import ITEM_DATA, TILE_DATA, TILE_SIZE, SCREEN_W, SCREEN_H, COLORS
 
 class RaftTile:
     def __init__(self, grid_x, grid_y, type=None, durability=None, color=None):
-        # grid_x/grid_y are WORLD grid coords (tile indices on the global GRID_W x GRID_H)
         self.grid_x = grid_x
         self.grid_y = grid_y
         self.type = type
         self.durability = durability
+        self.max_durability = durability  # Store the initial HP
         self.color = color
 
     def draw(self, screen):
-        """Draw the tile at its world tile coordinate."""
         x = self.grid_x * TILE_SIZE
         y = self.grid_y * TILE_SIZE
+        
+        # 1. Draw the base tile
         pygame.draw.rect(screen, self.color, (x, y, TILE_SIZE, TILE_SIZE))
+
+        # 2. Calculate Damage State
+        if self.durability < self.max_durability:
+            health_pct = self.durability / self.max_durability
+            
+            # State 1: Slightly Damaged (between 33% and 66% health)
+            if 0.33 < health_pct <= 0.66:
+                self._draw_cracks(screen, x, y, intensity=1)
+            
+            # State 2: Hardly Damaged (under 33% health)
+            elif health_pct <= 0.33:
+                self._draw_cracks(screen, x, y, intensity=2)
+
+    def _draw_cracks(self, screen, x, y, intensity):
+        crack_surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+        crack_color = (0, 0, 0, 180) # Dark, semi-transparent black
+        p = TILE_SIZE // 8 
+        
+        # State 1: A few jagged points
+        points = [
+            (2*p, 2*p), (3*p, 3*p), (5*p, 2*p), 
+            (6*p, 5*p), (3*p, 6*p), (4*p, 4*p)
+        ]
+        
+        # State 2: Connect the points and add more for 'Hardly Damaged'
+        if intensity == 2:
+            points += [
+                (p, 4*p), (4*p, p), (7*p, 7*p), 
+                (p, 7*p), (7*p, p), (4*p, 7*p)
+            ]
+
+        for px, py in points:
+            thick = max(2, TILE_SIZE // 16)
+            pygame.draw.rect(crack_surf, crack_color, (px, py, thick, thick))
+            
+            # Optional: Add a tiny 'branch' to each point to make it look jagged
+            pygame.draw.rect(crack_surf, crack_color, (px + thick, py + thick, thick, thick))
+
+        screen.blit(crack_surf, (x, y))
 
 class Raft:
     def __init__(self,size,grid_x,grid_y):
